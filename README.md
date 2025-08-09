@@ -41,7 +41,7 @@ steel-assembly-data-standard/
 ## 🚀 Quick Start
 
 The implementation of this framework, including all source code, sample data, and setup instructions, is available in a separate repository:  
-[![View Code](https://img.shields.io/badge/View_Code-Repository-blue)](https://github.com/yelu-coding/standardizing-steel-assembly-automation)
+[![View Code](https://img.shields.io/badge/View_Code-Repository-blue)](https://github.com/yelu-coding/gh_ifc-xml_matcher)
 
 Follow the installation and usage steps provided there to:
 1. Clone the repository and install dependencies
