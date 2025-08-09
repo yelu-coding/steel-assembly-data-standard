@@ -56,7 +56,7 @@ Follow the installation and usage steps provided there to:
 This diagram illustrates the complete data processing and matching pipeline of the Standardized Assembly Description Framework,  
 from IFC/DSTV parsing to geometric comparison, ambiguity detection, and final data export.
 
-![Data Flow Diagram](https://raw.githubusercontent.com/yelu-coding/steel-assembly-data-standard/main/data_flow_diagram.png)
+![Data Flow Diagram](data_flow_diagram.png)
 
 
 The diagram shows how IFC and DSTV XML components are parsed, preprocessed, matched by NC identifiers or geometric comparison,
