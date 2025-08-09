@@ -40,26 +40,14 @@ steel-assembly-data-standard/
 
 ## 🚀 Quick Start
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/yelu-coding/steel-assembly-data-standard.git
-cd steel-assembly-data-standard
-```
+The implementation of this framework, including all source code, sample data, and setup instructions, is available in a separate repository:  
+[![View Code](https://img.shields.io/badge/View_Code-Repository-blue)](https://github.com/yelu-coding/standardizing-steel-assembly-automation)
 
-### 2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Start the Hops server
-```bash
-python app.py
-```
-
-### 4. Connect with Grasshopper
-- Launch Rhino + Grasshopper
-- Open the provided `.gh` file
-- Set Hops component URLs (e.g., `http://127.0.0.1:5000/parse_ifc`)
+Follow the installation and usage steps provided there to:
+1. Clone the repository and install dependencies
+2. Start the Python Flask + Grasshopper Hops server
+3. Connect Grasshopper components to the Hops endpoints
+4. Run example IFC/XML matching workflows
 
 ---
 
@@ -84,7 +72,7 @@ MIT License © 2025 Ye Lu
 ## 📬 Contact
 - **Email**: luye_momo@foxmail.com
 - **GitHub**: [yelu-coding](https://github.com/yelu-coding)
-- **LinkedIn**: *(Add your LinkedIn link here)*
+- **LinkedIn**: https://www.linkedin.com/in/ye-lu-a16261238/
 
 ---
 
