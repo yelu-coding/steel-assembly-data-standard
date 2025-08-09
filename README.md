@@ -35,6 +35,7 @@ steel-assembly-data-standard/
 ├── output/                # Example output files (.json, .csv, .xlsx)
 ├── LICENSE                # License information
 └── README.md              # You are here
+、、、
 
 ## 🚀 Quick Start
 ### 1. Clone the repository
