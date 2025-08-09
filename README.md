@@ -52,7 +52,14 @@ Follow the installation and usage steps provided there to:
 ---
 
 ## 📊 Sample Data Flow Diagram
-*(Insert your thesis data flow diagram here)*
+
+This diagram illustrates the complete data processing and matching pipeline of the Standardized Assembly Description Framework,  
+from IFC/DSTV parsing to geometric comparison, ambiguity detection, and final data export.
+
+![Data Flow Diagram](docs/data_flow_diagram.png)
+
+The diagram shows how IFC and DSTV XML components are parsed, preprocessed, matched by NC identifiers or geometric comparison,
+validated through ambiguity checks, and exported as structured data for automated steel structure assembly.
 
 ---
 
