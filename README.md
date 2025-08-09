@@ -35,11 +35,58 @@ steel-assembly-data-standard/
 ├── output/                # Example output files (.json, .csv, .xlsx)
 ├── LICENSE                # License information
 └── README.md              # You are here
-、、、
+```
+---
 
 ## 🚀 Quick Start
+
 ### 1. Clone the repository
-、、、bash
+```bash
 git clone https://github.com/yelu-coding/steel-assembly-data-standard.git
 cd steel-assembly-data-standard
-、、、
+```
+
+### 2. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Start the Hops server
+```bash
+python app.py
+```
+
+### 4. Connect with Grasshopper
+- Launch Rhino + Grasshopper
+- Open the provided `.gh` file
+- Set Hops component URLs (e.g., `http://127.0.0.1:5000/parse_ifc`)
+
+---
+
+## 📊 Sample Data Flow Diagram
+*(Insert your thesis data flow diagram here)*
+
+---
+
+## 🎓 Academic Information
+- **Institution**: RWTH Aachen University  
+- **MSc Thesis**: *Advancing Steel Structure Assembly Automation: A Standardized Assembly Description for Enhanced Efficiency and Integration*  
+- **First Reviewer**: Prof. Dr. Sigrid Brell-Cokcan  
+- **Supervisor**: Dipl.-Ing. Heinrich Knitt  
+
+---
+
+## 📄 License
+MIT License © 2025 Ye Lu
+
+---
+
+## 📬 Contact
+- **Email**: luye_momo@foxmail.com
+- **GitHub**: [yelu-coding](https://github.com/yelu-coding)
+- **LinkedIn**: *(Add your LinkedIn link here)*
+
+---
+
+## 🔗 Related Work
+- [GH Dome Project](https://github.com/yelu-coding/gh-dome) — Previous Grasshopper scripting project
