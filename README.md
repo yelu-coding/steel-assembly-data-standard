@@ -4,8 +4,7 @@
 *M.Sc. Thesis: “Advancing Steel Structure Assembly Automation: A Standardized Assembly Description for Enhanced Efficiency and Integration.”*
 
 > **This repository summarizes the thesis and the method.**
-> **Runnable code & datasets live here:** **➡️ [yelu-coding/gh\_ifc-xml\_matcher](https://github.com/yelu-coding/gh_ifc-xml_matcher)** (same link as on the poster QR).
-
+> **Runnable code & datasets live here:** **➡️ [yelu-coding/gh\_ifc-xml\_matcher](https://github.com/yelu-coding/gh_ifc-xml_matcher)** 
 ## Table of Contents (Simplified)
 
 * [Overview](#overview)
