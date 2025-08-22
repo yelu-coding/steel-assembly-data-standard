@@ -16,11 +16,11 @@
 * [Usage (exact commands with your scripts)](#usage-exact-commands-with-your-scripts)
 * [Results & Survey](#results--survey)
 * [Limits & Roadmap / License / Contact](#limits--roadmap--license--contact)
-
-                           ![Pipeline overview](assets/data_flow_diagram.png)
 ---
 
 ## Overview
+
+![Pipeline overview](assets/data_flow_diagram.png)
 
 Design (IFC) and fabrication (DSTV-XML/NC) live in **different stacks**; direct links are weak, so teams still fix IDs/axes **by hand**. In practice, **IFC and XML both reference the same NC filenames**—but IFC has **no standard field** for it (projects hide NC names in different properties).
 We use the **NC file as a pivot**: start from **unique** NC groups to learn orientation, then resolve **duplicate** groups. Outputs are portable **JSON/CSV** (robot-ready) that plug into Grasshopper, planning, QA, or digital twins **without reformat**; less rework → less **waste & extra transport**.
