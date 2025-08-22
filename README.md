@@ -17,6 +17,7 @@
 * [Results & Survey](#results--survey)
 * [Limits & Roadmap / License / Contact](#limits--roadmap--license--contact)
 
+                           ![Pipeline overview](assets/data_flow_diagram.png)
 ---
 
 ## Overview
