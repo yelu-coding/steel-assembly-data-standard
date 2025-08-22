@@ -1,156 +1,186 @@
+Here’s the **updated README** (simplified ToC, with the corrected **DSTV-XML** section and Step 1 covering **both IFC + XML** flattening). You can paste this straight into `README.md`.
+
+---
+
 # Advancing Steel Structure Assembly Automation
-**A standardized assembly description & NC-pivot matching framework**  
-_M.Sc. Thesis: **“Advancing Steel Structure Assembly Automation: A Standardized Assembly Description for Enhanced Efficiency and Integration.”**_
 
-<p align="center">
-  <img src="assets/data_flow_diagram.png" alt="Pipeline overview" width="720"/>
-</p>
+**A standardized assembly description & NC-pivot matching framework**
+*M.Sc. Thesis: “Advancing Steel Structure Assembly Automation: A Standardized Assembly Description for Enhanced Efficiency and Integration.”*
 
-## TL;DR
-Make **IFC**, **DSTV-XML**, and **DSTV-NC** _work together_ by using the **NC file** as the **pivot**.  
-**Three steps:** (1) **Flatten & normalize** IFC/XML → a small, readable schema; (2) **Group, seed & learn** a reliable IFC↔XML rotation from **unique NC** pairs; (3) **Propagate & check** to resolve **duplicate-NC** groups via optimal assignment, and **flag ties** (equal-cost matches) for a quick confirmation.  
-Outputs: clean **JSON/CSV** that are **robot‑ready** and easy to plug into GH / planning / QA / digital twins.
+> Make **IFC**, **DSTV-XML**, and **DSTV-NC** work together by using the **NC file** as the **pivot**.
+> Three stages: **Flatten & normalize (IFC+XML)** → **Group, seed & learn (unique NC → R\_ref)** → **Propagate & check (duplicate-NC with optimal assignment; ties flagged)**.
 
----
+## Table of Contents (Simplified)
 
-## Why this matters
-- Files come from **different software**, so links are weak: **IFC** carries model meaning; **DSTV-XML/NC** carry fabrication & machine details.  
-- Teams still fix IDs/axes by hand → slow & error‑prone; automation stalls.  
-- In practice, **IFC and XML both reference the same NC filenames**. We treat the NC file as a **pivot** to start simple, then solve the hard cases.
+* [Overview](#overview)
+* [Data Model](#data-model)
+* [Pipeline](#pipeline)
+* [Usage (CLI & Python)](#usage-cli--python)
+* [Results & Survey](#results--survey)
+* [Limits & Roadmap / License / Contact](#limits--roadmap--license--contact)
 
 ---
 
-## Pipeline Overview
-**Step 1 — Flatten & normalize.**  
-Flatten IFC’s complex hierarchy and XML into a compact per‑part record:  
+## Overview
+
+Design and fabrication live in **different software stacks**. **IFC** carries model meaning; **DSTV-XML/NC** carry fabrication & machine details. Links are weak, so teams still fix IDs/axes **by hand**.
+In practice, **IFC and XML both reference the same NC filenames**—but IFC has **no standard field** for that link, so projects stash it in **different properties**. We treat the **NC file as a pivot**: start from easy, unique cases, then solve the hard duplicates.
+**Outputs** are portable **JSON/CSV** → plug into Grasshopper, planning, QA, or digital twins **without reformat**. Cutting rework also reduces **waste & extra transport**.
+
+---
+
+## Data Model
+
+**We flatten both IFC and XML** into compact per-part records, keeping only what matching and audits need.
+
+### IFC → `flattened_ifc`
+
+**Source fields**
+
+* **GlobalId** — globally unique identifier (cross-dataset key).
+* **Location** — global position via `IfcLocalPlacement` / `IfcCartesianPoint`.
+* **RefDirection (X)** & **Axis (Z)** — from `IfcAxis2Placement3D`; compute **Y = Z × X** (right-hand rule).
+
+**Normalized record**
+
 ```jsonc
 {
-  "id": "IFC/element id or XML id",
-  "axis": [[r11,r12,r13],[r21,r22,r23],[r31,r32,r33]],   // local basis or orientation
-  "location": [x, y, z],                                 // reference point (e.g., part origin / centroid)
-  "reflection": false,                                   // mirror flag if present
-  "properties": {"...": "..."},                          // carries arbitrary Psets / attrs
-  "nc_candidates": ["P123_045.nc"]                       // strings surfaced from properties
+  "ifc_id": "GUID-or-ElementID",
+  "location": [x, y, z],
+  "axis": [[x1,y1,z1],[x2,y2,z2],[x3,y3,z3]],  // B_ifc = [X Y Z], Y = Z × X
+  "reflection": false,                           // det(B_ifc) < 0 → true
+  "properties": { "Pset_*": { "Key": "Value" } },
+  "nc_hints": [
+    { "value": "PROJ_045.nc", "source": "Pset_Custom.NCFile" },
+    { "value": "045.nc",      "source": "Name" }
+  ]
 }
 ```
-> There is **no standard place** in IFC to store NC links; projects hide them in different properties. Pre‑cleaning makes NC hints **visible** and matching **simpler**.
 
-**Step 2 — Group, seed & learn.**  
-- **Group by NC filename** (from `nc_candidates`).  
-- Wherever a group is **unique 1↔1**, match it immediately and **learn** the IFC↔XML **reference rotation** `R_ref` (and optional translation `t_ref`) from these **seed pairs**.
+> `nc_hints` is a **flattening-time helper list** that surfaces NC-like strings found anywhere in IFC properties, with **source path** for auditability. If your project already uses a fixed field (e.g., `Pset_NC_Linkage.NC_FileName`), `nc_hints` will simply hold that authoritative value.
 
-**Step 3 — Propagate & check.**  
-- For **duplicate‑NC** groups (m:n), build a **cost matrix** comparing each candidate’s orientation to `R_ref` (and optionally position).  
-- Solve **one‑to‑one** with the **Hungarian** algorithm (optimal assignment).  
-- **Tie handling:** if two assignments have **equal cost** within a tolerance, mark as **ambiguous** → require a quick confirmation. The pipeline **fails safely**, not silently.
+### DSTV-XML → `flattened_xml`
 
----
+**Source fields** (exporters vary; we accept multiple representations)
 
-## Mathematical Notes (concise)
-- Let `B_ifc`, `B_xml` be local bases (3×3) for an IFC and an XML part. A candidate rotation is `R = B_xml · (B_ifc)^{-1}`.  
-- The rotation cost can be **Frobenius** `ε_rot = ||R − R_ref||_F` or an **angle** distance derived from `R_ref^T R`.  
-- Optional position term: `ε_pos = ||(p_xml − p_ifc) − t_ref||_2`.  
-- **Total cost** (tunable): `ε = w_rot·ε_rot + w_pos·ε_pos`.  
-- **Tie** if `|ε_i − ε_j| < τ_tie` (and optional `ε_pos` within tolerance).
+* **ID** — unique per-part identifier (e.g., `<Id>`, `<PosNo>`, `<Name>`, attribute `id`).
+* **Origin/Base** — global coordinates (e.g., `<Base>`, `<Origin>`, `<Transformation><Origin>`, `<KOORD>`).
+* **Orientation** — one of:
 
----
+  * **A. Vector form**: two unit vectors (e.g., `<Rx>`, `<Ry>` or `<X>`, `<Y>`).
+  * **B. Matrix form**: a 3×3 rotation matrix (e.g., `<Matrix>` or `m11..m33`).
+  * **C. Euler/axis-angle form**: e.g., `rx/ry/rz` or `<Rotation>` with angles.
+* **NC filename** — e.g., `<NCFile>`, `<Reference>`, `<DSTV><FileName>`, attribute `filename`, etc.
 
-## Repository Structure
-```
-.
-├── assets/                         # diagrams, poster figures (add data_flow_diagram.png here)
-├── data/
-│   ├── case1_ring_beam/            # 9 parts; clean baseline
-│   ├── case2_industrial_subset/    # 100+ parts; duplicate-NC groups
-│   └── case3_ifc2x3_vs_ifc4/       # IFC4 subset aligned to IFC2x3; same XML
-├── src/
-│   ├── io_ifc.py                   # IFC parsing (IFCOpenShell or alternative)
-│   ├── io_xml.py                   # DSTV-XML parsing utilities
-│   ├── flatten.py                  # build {id, axis, location, reflection, properties, nc_candidates}
-│   ├── grouping.py                 # NC-based grouping utilities
-│   ├── learn_transform.py          # estimate R_ref (and t_ref) from unique-NC seeds
-│   ├── assign.py                   # cost matrix + Hungarian + tie detection
-│   ├── export_json.py              # structured JSON export
-│   ├── export_csv.py               # validation CSV export
-│   └── cli.py                      # tiny CLI entry points
-├── viz/
-│   ├── gh_reader.ghx               # (optional) Grasshopper file to visualize checks
-│   └── rhino_notes.md
-├── outputs/                        # results written here
-└── README.md
+**Normalized record**
+
+```jsonc
+{
+  "xml_id": "P045",
+  "location": [x, y, z],
+  "axis": [[x1,y1,z1],[x2,y2,z2],[x3,y3,z3]],  // B_xml = [X Y Z]
+  "reflection": false,                           // det(B_xml) < 0 → true
+  "properties": { "Profile": "HEA200", "Grade": "S355" },
+  "nc_filename": "PROJ_045.nc"
+}
 ```
 
+**How `axis` is built**
+
+* **A. Vector form**
+  `X = normalize(Rx or X)`; `Y = normalize(Ry or Y)`; `Z = normalize(X × Y)` → **B\_xml = \[X Y Z]**.
+* **B. Matrix form**
+  `B_xml = orthonormalize(Matrix)`; use columns as **X, Y, Z**.
+* **C. Euler/axis-angle**
+  Build `B_xml` from the documented rotation order (e.g., `Rz(γ)·Ry(β)·Rz(α)`), then orthonormalize.
+
+> Regardless of source form, we **orthonormalize** to a right-handed basis `B_xml = [X Y Z]` and set `reflection = (det(B_xml) < 0)`.
+
 ---
 
-## Quick Start
-> Requires Python **3.10+**. Recommended on a fresh virtual environment.
+## Pipeline
+
+**Step 1 — Flatten & normalize (IFC + XML).**
+Parse IFC & XML → build unified records `{id, axis, location, reflection, properties}`.
+
+* IFC: compute **B\_ifc** from `IfcAxis2Placement3D` (**Y = Z × X**); collect **`nc_hints[]`** from properties (since IFC has no standard NC field).
+* XML: compute **B\_xml** from vectors/matrix/angles; keep the **authoritative** `nc_filename` from XML.
+  Write both to **JSON/CSV**. This step **exposes** IFC’s hidden NC links and preserves XML’s **authoritative** NC, making grouping and seeding straightforward.
+
+**Step 2 — Group, seed & learn.**
+Use XML’s **`nc_filename`** as the anchor; for each NC name, find IFC parts whose **`nc_hints[].value` equals that name**.
+
+* If the NC group is **unique 1↔1**, match it immediately → **seed pair**.
+* From seeds, **learn** the reference transform: rotation **`R_ref`** (and optional translation **`t_ref`**).
+
+**Step 3 — Propagate & check.**
+For **duplicate-NC** groups (m\:n), build a **cost matrix** comparing candidates against **`R_ref`** (rotation primary; position optional) and solve **one-to-one** with **Hungarian** (optimal assignment).
+
+* **Tie handling**: if two assignments have **equal cost** within tolerance, mark as **ambiguous** and request a quick confirmation.
+* **Outputs**: `match.json` (groups, `R_ref`, scores, flags) and `validation.csv` (auditable per-pair table).
+
+> Fail **safely**, not silently.
+
+---
+
+## Usage (CLI & Python)
+
+> **CLI** = Command-Line Interface. Use it for reproducibility and batch runs; or import functions directly in Python.
+
+**Install**
 
 ```bash
-# 1) Create env & install
-python -m venv .venv && source .venv/bin/activate   # (Windows) .venv\Scripts\activate
-pip install -r requirements.txt  # numpy, pandas, scipy, ifcopenshell, lxml/xmltodict, rich, click
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt   # numpy pandas scipy ifcopenshell lxml/xmltodict rich click
+```
 
-# 2) Run a case (example: Case 1)
+**CLI — run a case**
+
+```bash
 python -m src.cli match \
   --ifc data/case1_ring_beam/ring.ifc \
   --xml data/case1_ring_beam/parts.xml \
   --out outputs/case1 \
-  --rot-metric frobenius --tau-tie 1e-3 --tau-pos 1e-3
-
-# 3) Inspect outputs
-# - outputs/case1/validation.csv   (ifc_id, xml_id, nc_name, rot_cost, pos_cost, total, tie, ambiguous, status)
-# - outputs/case1/match.json       (groups, R_ref, t_ref, per-pair scores & flags)
+  --rot-metric frobenius --tau-tie 1e-3
+# Inspect: outputs/case1/match.json, outputs/case1/validation.csv
 ```
 
-**Reproduce all cases**
-```bash
-python -m src.cli run-all --out outputs \
-  --case1 --case2 --case3 --rot-metric frobenius --tau-tie 1e-3
+**Python — programmatic**
+
+```python
+from src.flatten import flatten_ifc, flatten_xml
+from src.grouping import group_by_nc
+from src.learn_transform import learn_reference
+from src.assign import assign_hungarian
+
+ifc = flatten_ifc("ring.ifc")      # returns flattened_ifc list/dict
+xml = flatten_xml("parts.xml")     # returns flattened_xml list/dict
+groups = group_by_nc(ifc, xml)     # XML nc_filename ↔ IFC nc_hints[].value
+R_ref, t_ref, seeds = learn_reference(groups)
+assignments = assign_hungarian(groups, R_ref, t_ref)  # includes tie flags
 ```
 
 ---
 
-## Results (replicable)
-- **Case 1 — Ring beam (9 parts):** clean baseline, **100%** matches; duplicate name resolved by geometry (not ad‑hoc rules).  
-- **Case 2 — Industrial (100+ parts):** many duplicate‑NC groups. Flow: **lock unique seeds → learn R_ref → propagate**. On the checked subset, **43 pairs** confirmed with **overall accuracy > 90%**; flagged pairs were visually confirmed and functionally correct downstream.  
-- **Case 3 — IFC2x3 vs IFC4 (subset):** IFC4 was from production (not a curated twin), so trimmed to a **common subset** and matched to the **same XML**. Because exports **list components in different orders**, **two pairs had the same match score**. With a **tie**, the solver may return **either** pairing—order‑dependent yet equally valid. This exposes the **real cause of ambiguity**, so the pipeline **labels all ties as ambiguous** for a quick confirmation.
+## Results & Survey
+
+**Case 1 — Ring beam (9 parts).** Clean baseline with several unique NC groups: **100%** correct; a duplicate name resolved by geometry (not rules).
+**Case 2 — Industrial (100+ parts).** Many duplicate-NC groups. Flow: **lock unique seeds → learn `R_ref` → propagate**. On the checked subset, **43 pairs** confirmed; **overall accuracy > 90%**; flagged pairs remained functionally correct after visual check.
+**Case 3 — IFC2x3 vs IFC4 (subset).** IFC4 from production (not a curated twin), trimmed to a **common subset** and matched to the **same XML**. Because the two exports **list components in different orders**, **two pairs got the same match score**. When scores **tie**, the solver may return **either** pairing—**order-neutral** yet equally valid. This reveals the **real cause of ambiguity**, so the pipeline **labels all ties as ambiguous** for a brief check.
+
+**Industry survey → actions.**
+Teams reported **manual/semi-manual linking** and **inconsistent NC storage** in IFC; demand for automated IFC–NC is strong.
+We propose: IFC **`Pset_NC_Linkage.NC_FileName`** + unique NC naming **`PROJECTCODE_MARKNO.nc`**.
 
 ---
 
-## Outputs
-- **`match.json`** — structured record per NC group: seeds, `R_ref`, candidate scores, assignments, tie/ambiguous flags.  
-- **`validation.csv`** — per‑pair table for audits: `ifc_id, xml_id, nc_name, rot_cost, pos_cost, total_cost, tie, ambiguous, status`.  
-- (Optional) **`sequence.csv`** — simple sequence suggestion (if you export one).
+## Limits & Roadmap / License / Contact
+
+**Limits.** Ties are **reported** (not forced); the method benefits from basic NC naming hygiene.
+**Roadmap.** Add secondary cues (pos offsets, feature signatures, adjacency) or **AI** to **break ties**; formalize **assembly semantics** in IFC; broaden cross-tool validation; parallel per-NC group.
+**License.** MIT (or your choice).
+**Contact.** **Ye Lu** · RWTH Aachen — Construction & Robotics (2025). Issues → GitHub Issues; email on your poster/card.
 
 ---
 
-## Industry Survey → Actions
-- **Findings:** linking is **manual/semi‑manual**; NC is stored **inconsistently** across IFC properties; demand for **automated IFC–NC** linking.  
-- **Actions:** define **`Pset_NC_Linkage.NC_FileName`** in IFC; adopt **unique NC naming** e.g. `PROJECTCODE_MARKNO.nc`.
-
----
-
-## Limitations & Roadmap
-- **Ties:** equal-cost assignments are **reported as ambiguous** rather than forced.  
-- **Naming hygiene:** method benefits from basic NC naming discipline.  
-- **Next:** add secondary cues (pos offsets, feature signatures, adjacency) or **AI** to **break ties**; formalize **assembly semantics** in IFC; broaden cross‑tool validation; parallel pipelines per NC group.
-
----
-
-## Sustainability & Impact
-Less manual “glue work”, fewer errors, **robot‑ready** identities & axes. Portable **JSON/CSV** slots into GH, scheduling, QA, or digital twins with **no reformat**. Cutting rework/mis‑fabrication **reduces waste & transport**.
-
----
-
-## Citation
-If this repository helps your work, please cite:
-```text
-Ye Lu. Advancing Steel Structure Assembly Automation: A Standardized Assembly Description for Enhanced Efficiency and Integration, 2025.
-```
-
-## License
-Choose a license (e.g., MIT). Replace this section with the actual text once decided.
-
-## Contact
-**Ye Lu** · RWTH Aachen — Construction & Robotics (2025)  
-Issues & questions: please open a GitHub issue or reach me via the email on my poster/card.
+Want me to drop this into a file and add a minimal `requirements.txt` + `src/cli.py` skeleton that matches the README commands?
