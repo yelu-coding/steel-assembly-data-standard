@@ -202,7 +202,9 @@ PY
 
 **Case 1 — Ring beam (9 parts).** Clean baseline, **100%** correct; a duplicate name resolved by geometry (not rules).
 **Case 2 — Industrial (100+ parts).** Many duplicate-NC groups. Flow: **unique seeds → learn ref\_mat → propagate**; on the checked subset, **43 pairs** confirmed; **overall accuracy > 90%**; flagged pairs remained functionally correct after visual check.
-**Case 3 — IFC2x3 vs IFC4 (subset).** IFC4 from production (not a curated twin), trimmed to a **common subset** and matched to the **same XML**. Because the two exports **list components in different orders**, **two pairs got the same match score**. With a tie, the solver may return **either** pairing—**order-neutral** yet equally valid. We **label ties as ambiguous** for a brief check.
+**Case 3 — IFC2x3 vs IFC4 (common subset).**
+The IFC4 file came from production and wasn’t a curated twin of IFC2x3, so I trimmed it to the **common subset** and matched both to the **same XML**. Two pairs ended up with **exactly the same match score**, so the algorithm had **two equally valid** assignments. Which one you get depends on the **input order** (the exports list parts differently). That’s why I now **label all equal-score cases as ambiguous**, so we do a quick confirmation instead of silently picking one of the two.
+
 
 **Industry survey → actions.** Teams reported **manual/semi-manual linking** and **inconsistent NC storage** in IFC; demand for automated IFC–NC is strong.
 We propose: IFC **`Pset_NC_Linkage.NC_FileName`** + unique NC naming **`PROJECTCODE_MARKNO.nc`**.
