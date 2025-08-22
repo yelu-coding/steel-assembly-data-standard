@@ -201,7 +201,9 @@ PY
 ## Results & Survey
 
 **Case 1 — Ring beam (9 parts).** Clean baseline, **100%** correct; a duplicate name resolved by geometry (not rules).
+
 **Case 2 — Industrial (100+ parts).** Many duplicate-NC groups. Flow: **unique seeds → learn ref\_mat → propagate**; on the checked subset, **43 pairs** confirmed; **overall accuracy > 90%**; flagged pairs remained functionally correct after visual check.
+
 **Case 3 — IFC2x3 vs IFC4 (common subset).**
 The IFC4 file came from production and wasn’t a curated twin of IFC2x3, so I trimmed it to the **common subset** and matched both to the **same XML**. Two pairs ended up with **exactly the same match score**, so the algorithm had **two equally valid** assignments. Which one you get depends on the **input order** (the exports list parts differently). That’s why I now **label all equal-score cases as ambiguous**, so we do a quick confirmation instead of silently picking one of the two.
 
@@ -221,6 +223,7 @@ We propose: IFC **`Pset_NC_Linkage.NC_FileName`** + unique NC naming **`PROJECTC
 
 **Roadmap.**
 Add secondary cues (pos offsets, hole/feature signatures, adjacency) or AI to **break ties**; formalize **assembly semantics** in IFC; broaden cross-tool validation; parallelization per NC group.
+
 
 **License.** MIT (or your choice).
 **Contact.** **Ye Lu** · RWTH Aachen — Construction & Robotics (2025). Issues → GitHub Issues; email on your poster/card.
