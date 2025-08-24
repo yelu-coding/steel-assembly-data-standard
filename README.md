@@ -225,7 +225,7 @@ We propose: IFC **`Pset_NC_Linkage.NC_FileName`** + unique NC naming **`PROJECTC
 Add secondary cues (pos offsets, hole/feature signatures, adjacency) or AI to **break ties**; formalize **assembly semantics** in IFC; broaden cross-tool validation; parallelization per NC group.
 
 
-**License.** MIT (or your choice).
-**Contact.** **Ye Lu** · RWTH Aachen — Construction & Robotics (2025). Issues → GitHub Issues; email on your poster/card.
+**License.** MIT
+**Contact.** **Ye Lu** · RWTH Aachen — Construction & Robotics (2025). Issues → GitHub Issues; luye_momo@foxmail.com.
 
 
